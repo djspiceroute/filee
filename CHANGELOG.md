@@ -35,3 +35,4 @@ this file is the human-readable summary of it.
   both images-only and non-destructive.
 - QA: `expect`'s `menuContains`/`menuExcludes` check the right-click
   menu's actual contents.
+<!-- test commit for sync-workflow dry run, will be deleted -->

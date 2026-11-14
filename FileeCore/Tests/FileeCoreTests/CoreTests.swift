@@ -618,6 +618,30 @@ final class CoreTests: XCTestCase {
         for f in FileTypeFilter.allCases where f != .all { XCTAssertTrue(f.extensions.contains(f.sampleExtension ?? "")) }
     }
 
+    func testFileTypeFilterRecognizedApps() {
+        XCTAssertTrue(FileTypeFilter.powerpoint.recognizedAppBundleIDs.contains("com.apple.iWork.Keynote"))
+        XCTAssertFalse(FileTypeFilter.powerpoint.recognizedAppBundleIDs.contains("com.openai.chat"))
+        XCTAssertTrue(FileTypeFilter.markdown.recognizedAppBundleIDs.contains("com.apple.TextEdit"))
+        XCTAssertFalse(FileTypeFilter.markdown.recognizedAppBundleIDs.contains("com.apple.dt.Xcode"))
+        XCTAssertTrue(FileTypeFilter.video.recognizedAppBundleIDs.contains("org.videolan.vlc"))
+        XCTAssertTrue(FileTypeFilter.word.recognizedAppBundleIDs.contains("com.microsoft.Word"))
+        XCTAssertTrue(FileTypeFilter.excel.recognizedAppBundleIDs.contains("com.microsoft.Excel"))
+        XCTAssertTrue(FileTypeFilter.images.recognizedAppBundleIDs.contains("com.apple.Preview"))
+        // TextEdit is Markdown's own bundled fallback icon: if Word also recognized it as a real
+        // app, a Mac with TextEdit as the default for both .docx and .md would show 2 identical
+        // buttons (Word's real TextEdit icon and Markdown's bundled TextEdit icon).
+        XCTAssertFalse(FileTypeFilter.word.recognizedAppBundleIDs.contains("com.apple.TextEdit"))
+    }
+
+    func testFileTypeFilterBundledFallbackIcons() {
+        XCTAssertNil(FileTypeFilter.all.bundledFallbackIconName)
+        for f in FileTypeFilter.allCases where f != .all {
+            XCTAssertNotNil(f.bundledFallbackIconName)
+        }
+        let names = FileTypeFilter.allCases.compactMap { $0.bundledFallbackIconName }
+        XCTAssertEqual(Set(names).count, names.count, "each family's bundled fallback icon name must be unique")
+    }
+
     /// Worst-case values (qa.py --only worst): a name with a line break, a package's kind, 2 TB.
     func testWorstCaseFormatting() {
         XCTAssertEqual("first line\nsecond line.txt".singleLine, "first line⏎second line.txt")

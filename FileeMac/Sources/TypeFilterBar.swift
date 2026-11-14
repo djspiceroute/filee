@@ -106,23 +106,39 @@ final class TypeFilterBar: FlippedView {
         var used: [URL] = []
         var out: [FileTypeFilter: (CGImage, String)] = [:]
         for f in FileTypeFilter.allCases {
-            guard let ext = f.sampleExtension, let type = UTType(filenameExtension: ext),
-                  var app = ws.urlForApplication(toOpen: type) else { continue }
-            if used.contains(app),
-               let other = (fallbacks[f] ?? []).lazy.compactMap({ ws.urlForApplication(withBundleIdentifier: $0) })
-                   .first(where: { !used.contains($0) }) {
-                app = other
+            guard let ext = f.sampleExtension, let type = UTType(filenameExtension: ext) else { continue }
+            // A recognized app that's already used by an earlier family only counts if a fresh
+            // substitute is available; otherwise this family falls through to its bundled icon
+            // below rather than drawing a duplicate of another button's icon.
+            var app: URL?
+            if var candidate = ws.urlForApplication(toOpen: type),
+               let bundleID = Bundle(url: candidate)?.bundleIdentifier,
+               f.recognizedAppBundleIDs.contains(bundleID) {
+                if used.contains(candidate) {
+                    candidate = (fallbacks[f] ?? []).lazy.compactMap({ ws.urlForApplication(withBundleIdentifier: $0) })
+                        .first(where: { !used.contains($0) }) ?? candidate
+                }
+                if !used.contains(candidate) { app = candidate }
             }
-            used.append(app)
-            let px = 64
-            guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
-                                             samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                                             bytesPerRow: 0, bitsPerPixel: 0) else { continue }
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-            ws.icon(forFile: app.path).draw(in: NSRect(x: 0, y: 0, width: px, height: px))
-            NSGraphicsContext.restoreGraphicsState()
-            if let image = rep.cgImage { out[f] = (image, app.deletingPathExtension().lastPathComponent) }
+            if let app {
+                used.append(app)
+                let px = 64
+                guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8,
+                                                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                                 bytesPerRow: 0, bitsPerPixel: 0) else { continue }
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+                ws.icon(forFile: app.path).draw(in: NSRect(x: 0, y: 0, width: px, height: px))
+                NSGraphicsContext.restoreGraphicsState()
+                if let image = rep.cgImage { out[f] = (image, app.deletingPathExtension().lastPathComponent) }
+            } else if let name = f.bundledFallbackIconName,
+                      let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "TypeIcons"),
+                      let image = NSImage(contentsOf: url),
+                      let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                // "" as the app name: a bundled icon isn't necessarily what actually opens this
+                // family's files, so the tooltip shouldn't name an app that doesn't open them.
+                out[f] = (cgImage, "")
+            }
         }
         return out
     }

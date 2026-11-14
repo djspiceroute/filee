@@ -29,8 +29,8 @@ jobs:
 
       - name: Fetch upstream
         run: |
-          git remote add upstream https://github.com/ndeville/filee.git
-          git fetch upstream main
+          git remote add upstream https://github.com/djspiceroute/filee.git
+          git fetch upstream fake-upstream-test:refs/remotes/upstream/main
 
       - name: Check for new upstream commits
         id: check

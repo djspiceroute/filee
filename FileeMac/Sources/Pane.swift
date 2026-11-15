@@ -210,6 +210,10 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
     let pathField = PathField()
     /// The path as clickable folders; the path field replaces it while a path is typed.
     let crumbs = PathCrumbs()
+    /// Back, Forward, Enclosing Folder: a mouse-reachable copy of the Go menu commands. Hidden below `navMinWidth`.
+    private let backButton = PaneController.navButton(symbol: "chevron.left", tip: "Back")
+    private let forwardButton = PaneController.navButton(symbol: "chevron.right", tip: "Forward")
+    private let upButton = PaneController.navButton(symbol: "chevron.up", tip: "Enclosing Folder")
     /// Under the tabs, right of the path: what the folder holds and the free space on its volume, in the file list's size.
     let countLabel = label("", size: 11, color: Theme.fg2)
     /// Folders and files in the listing, counted when it changes (not at each selection change).
@@ -273,6 +277,12 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
             self.window.activate(pane: self.index)
             return self.window.drop(urls: urls, into: folder, copy: copy)
         }
+        backButton.target = self
+        backButton.action = #selector(clickBack)
+        forwardButton.target = self
+        forwardButton.action = #selector(clickForward)
+        upButton.target = self
+        upButton.action = #selector(clickUp)
         tabStrip.onSelect = { [weak self] i in self?.showTab(i) }
         tabStrip.onClose = { [weak self] i in self?.closeTab(i) }
         tabStrip.onNew = { [weak self] in self?.newTab() }
@@ -289,13 +299,27 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         messageLabel.maximumNumberOfLines = 3
         messageLabel.lineBreakMode = .byWordWrapping
         messageLabel.isHidden = true
-        for v in [accentBar, tabStrip, typeBar, crumbs, pathField, countLabel, contentHost, filterBar, messageLabel] as [NSView] { container.addSubview(v) }
+        for v in [accentBar, tabStrip, typeBar, backButton, forwardButton, upButton, crumbs, pathField, countLabel, contentHost, filterBar, messageLabel] as [NSView] { container.addSubview(v) }
         let click = NSClickGestureRecognizer(target: self, action: #selector(headerClicked))
         tabStrip.addGestureRecognizer(click)
         click.delaysPrimaryMouseButtonEvents = false
     }
 
     @objc private func headerClicked() { window.activate(pane: index) }
+
+    private static func navButton(symbol: String, tip: String) -> NSButton {
+        let b = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tip) ?? NSImage(), target: nil, action: nil)
+        b.isBordered = false
+        b.bezelStyle = .regularSquare
+        b.contentTintColor = Theme.muted
+        b.imageScaling = .scaleProportionallyDown
+        b.toolTip = tip
+        return b
+    }
+
+    @objc private func clickBack() { window.activate(pane: index); goBack(); focusContent() }
+    @objc private func clickForward() { window.activate(pane: index); goForward(); focusContent() }
+    @objc private func clickUp() { window.activate(pane: index); goUp(); focusContent() }
 
     func layout() {
         let b = container.bounds
@@ -314,8 +338,21 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
         let countW = min((b.width * 0.5).rounded(), ceil(countLabel.attributedStringValue.size().width) + 12)
         let countH = ceil(Theme.listSize * 1.3)
         let fieldH = (Theme.listSize * 1.35).rounded()
-        pathField.frame = NSRect(x: 10, y: accentH + tabRowH + ((pathH - fieldH) / 2).rounded(), width: b.width - countW - 20, height: fieldH)
-        crumbs.frame = NSRect(x: 5, y: accentH + tabRowH + 2, width: b.width - countW - 15, height: pathH - 4)
+        // Below navMinWidth, Back/Forward/Up step aside and the crumbs/path field take the full row, as before.
+        let navMinWidth: CGFloat = 260
+        let navH = pathH - 4, navW: CGFloat = 20, navGap: CGFloat = 2
+        let navShown = b.width >= navMinWidth
+        for btn in [backButton, forwardButton, upButton] { btn.isHidden = !navShown }
+        let navTotal = navShown ? navW * 3 + navGap * 2 + 6 : 0
+        if navShown {
+            let navY = accentH + tabRowH + 2
+            backButton.frame = NSRect(x: 5, y: navY, width: navW, height: navH)
+            forwardButton.frame = NSRect(x: 5 + navW + navGap, y: navY, width: navW, height: navH)
+            upButton.frame = NSRect(x: 5 + (navW + navGap) * 2, y: navY, width: navW, height: navH)
+        }
+        let pathX = 5 + navTotal
+        pathField.frame = NSRect(x: pathX + 5, y: accentH + tabRowH + ((pathH - fieldH) / 2).rounded(), width: b.width - countW - pathX - 15, height: fieldH)
+        crumbs.frame = NSRect(x: pathX, y: accentH + tabRowH + 2, width: b.width - countW - pathX - 10, height: pathH - 4)
         countLabel.frame = NSRect(x: b.width - countW - 6, y: accentH + tabRowH + ((pathH - countH) / 2).rounded(), width: countW, height: countH)
         countLabel.alignment = .right
         let top = accentH + tabRowH + pathH
@@ -348,6 +385,9 @@ final class PaneController: NSObject, FileViewDelegate, NSTextFieldDelegate {
     }
 
     private func updatePathLabel() {
+        backButton.isEnabled = !tab.back.isEmpty
+        forwardButton.isEnabled = !tab.forward.isEmpty
+        upButton.isEnabled = path != "/"
         guard !pathField.isEditable else { return }
         crumbs.show(path: path, active: isActivePane)
     }

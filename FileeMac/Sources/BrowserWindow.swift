@@ -838,12 +838,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     func contextMenu(for items: [FileItem], in pane: PaneController) -> NSMenu {
         let menu = NSMenu()
-        func add(_ title: String, _ id: String, args: String? = nil) {
+        func add(_ title: String, _ id: String, args: String? = nil, to target: NSMenu = menu) {
             let it = NSMenuItem(title: title, action: #selector(runCommand(_:)), keyEquivalent: "")
             it.target = self
             it.representedObject = [id] + (args.map { [$0] } ?? [])
             if let b = Keymap.shared.binding(for: id, args: args) { AppDelegate.showKey(b, on: it) }
-            menu.addItem(it)
+            target.addItem(it)
         }
         if items.isEmpty {
             let newItem = NSMenuItem(title: "New", action: nil, keyEquivalent: "")
@@ -885,26 +885,42 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         menu.addItem(.separator())
         add(items.count == 1 ? "Rename…" : "Batch Rename…", items.count == 1 ? "rename" : "batchRename")
         let allImages = !files.isEmpty && files.count == items.count && files.allSatisfy { Self.imageExts.contains($0.ext) }
-        if allImages {
-            add("Convert to JPEG" + (files.count > 1 ? " (\(files.count) files)" : ""), "convertToJPEG")
-            add("Create PDF from Selection", "createPDF")
-        }
-        add("Add Today's Date (YYMMDD-)", "prefixToday")
-        add("Slugify Names", "slugifyNames")
         add("Duplicate", "duplicate")
         add("Copy to Other Pane", "copyToOther")
         add("Move to Other Pane", "moveToOther")
         add("Add to Drop Stack", "stackAdd")
         add("New Folder with Selection", "newFolderWithSelection")
+
+        let copyAsMenu = NSMenu()
+        add("Copy Path", "copyPath", to: copyAsMenu)
+        add("Copy Path with ~", "copyTildePath", to: copyAsMenu)
+        add("Copy Name", "copyName", to: copyAsMenu)
+        let copyAsItem = NSMenuItem(title: "Copy As", action: nil, keyEquivalent: "")
+        copyAsItem.submenu = copyAsMenu
+        menu.addItem(copyAsItem)
+
+        let namingMenu = NSMenu()
+        add("Add Today's Date (YYMMDD-)", "prefixToday", to: namingMenu)
+        add("Slugify Names", "slugifyNames", to: namingMenu)
+        let namingItem = NSMenuItem(title: "Naming", action: nil, keyEquivalent: "")
+        namingItem.submenu = namingMenu
+        menu.addItem(namingItem)
         menu.addItem(.separator())
-        add("Compress to Zip", "compress")
-        if items.contains(where: { $0.ext == "zip" }) { add("Extract Here", "extract") }
-        add("Copy Path", "copyPath")
-        add("Copy Path with ~", "copyTildePath")
-        add("Copy Name", "copyName")
-        add("Make Symbolic Link", "makeSymlink")
+
+        let toolsMenu = NSMenu()
+        if allImages {
+            add("Convert to JPEG" + (files.count > 1 ? " (\(files.count) files)" : ""), "convertToJPEG", to: toolsMenu)
+            add("Create PDF from Selection", "createPDF", to: toolsMenu)
+        }
+        add("Compress to Zip", "compress", to: toolsMenu)
+        if items.contains(where: { $0.ext == "zip" }) { add("Extract Here", "extract", to: toolsMenu) }
+        add("Make Symbolic Link", "makeSymlink", to: toolsMenu)
+        if items.count == 1, items[0].isFolder { add("Open \(Theme.settings.terminalApp) Here", "terminalHere", to: toolsMenu) }
+        let toolsItem = NSMenuItem(title: "Tools", action: nil, keyEquivalent: "")
+        toolsItem.submenu = toolsMenu
+        menu.addItem(toolsItem)
+
         add("Reveal in Finder", "revealInFinder")
-        if items.count == 1, items[0].isFolder { add("Open \(Theme.settings.terminalApp) Here", "terminalHere") }
         appendActions(to: menu, items: items)
         menu.addItem(.separator())
         add("Move to Trash", "trash")

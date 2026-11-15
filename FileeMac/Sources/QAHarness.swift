@@ -86,6 +86,15 @@ final class QAHarness {
 
     private func names(_ items: [FileItem]) -> [String] { items.map(\.name) }
 
+    /// Every item title in a menu, including submenus (Copy As, Naming, Tools, New, Open With…).
+    private func menuTitles(_ menu: NSMenu) -> [String] {
+        menu.items.flatMap { item -> [String] in
+            var titles = [item.title]
+            if let sub = item.submenu { titles += menuTitles(sub) }
+            return titles
+        }
+    }
+
     // MARK: Steps
 
     private func run(_ step: [String: Any], done: @escaping () -> Void) {
@@ -671,11 +680,11 @@ final class QAHarness {
             }
         }
         if let want = step["menuContains"] as? [String] {
-            let titles = wc.contextMenu(for: pane(step).selectedItems, in: pane(step)).items.map(\.title)
+            let titles = menuTitles(wc.contextMenu(for: pane(step).selectedItems, in: pane(step)))
             ok = ok && want.allSatisfy({ titles.contains($0) })
         }
         if let avoid = step["menuExcludes"] as? [String] {
-            let titles = wc.contextMenu(for: pane(step).selectedItems, in: pane(step)).items.map(\.title)
+            let titles = menuTitles(wc.contextMenu(for: pane(step).selectedItems, in: pane(step)))
             ok = ok && !avoid.contains(where: { titles.contains($0) })
         }
         if let s = step["countContains"] as? [String] { ok = ok && s.allSatisfy { p.countLabel.stringValue.contains($0) } }

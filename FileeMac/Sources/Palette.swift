@@ -135,7 +135,7 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
         var out: [Entry] = []
         if case .commands = mode {
             var seen = Set<String>()
-            for c in CommandCatalog.all {
+            for c in CommandCatalog.all where c.id != "palette" {
                 let key = c.id + (c.args ?? "")
                 guard seen.insert(key).inserted else { continue }
                 let b = Keymap.shared.binding(for: c.id, args: c.args)

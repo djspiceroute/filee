@@ -274,7 +274,8 @@ final class SidebarController: NSObject, NSOutlineViewDataSource, NSOutlineViewD
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
         let f = SidebarMetrics.font
         if let s = item as? Section {
-            let l = label(s.title.uppercased(), size: (f * 0.78).rounded(), weight: .bold, color: Theme.muted)
+            let title = s.title.uppercased() + (s === sections[3] && s.rows.isEmpty ? "  ·  Drop files here" : "")
+            let l = label(title, size: (f * 0.78).rounded(), weight: .bold, color: Theme.muted)
             let v = NSTableCellView()
             v.addSubview(l)
             l.frame = NSRect(x: 10, y: 5, width: 400, height: (f * 1.1).rounded())

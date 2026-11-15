@@ -73,17 +73,15 @@ final class OperationCenter {
                 LiveState.publish()
                 if let record { self.undoStack.push(record) }
                 let verb = mode == .copy ? "Copied" : "Moved"
+                // The transfer row already shows the result in place — no need for a second, duplicate toast.
                 if !t.errors.isEmpty {
                     let text = "❌ " + t.errors.prefix(3).joined(separator: " · ")
-                    self.window?.showMessage(text, error: true)
                     panel?.finish(t, text: text, error: true)
                 } else if t.cancel.isCancelled {
                     let text = "Cancelled after \(t.results.count.formatted()) of \(sources.count.formatted())"
-                    self.window?.showMessage(text)
                     panel?.finish(t, text: text, error: true)
                 } else {
                     let text = "✅ \(verb) \(Format.items(t.results.count)) to \(folder.abbreviatingHome)"
-                    self.window?.showMessage(text)
                     panel?.finish(t, text: text, error: false)
                 }
                 self.touched([folder] + (mode == .move ? sourceFolders : []))

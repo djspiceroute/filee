@@ -138,7 +138,7 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
         outline.usesAlternatingRowBackgroundColors = false
         outline.backgroundColor = Theme.bg
         outline.gridStyleMask = []
-        outline.intercellSpacing = NSSize(width: 0, height: 0)
+        outline.intercellSpacing = NSSize(width: 8, height: 0)
         outline.columnAutoresizingStyle = .noColumnAutoresizing
         outline.indentationPerLevel = 14
         outline.autoresizesOutlineColumn = false
@@ -473,7 +473,8 @@ final class ListView: NSObject, FileView, NSOutlineViewDataSource, NSOutlineView
             }
             widths[c] = ceil(w)
         }
-        let available = scroll.contentSize.width
+        let gaps = CGFloat(max(0, columns.count - 1)) * outline.intercellSpacing.width
+        let available = scroll.contentSize.width - gaps
         let others = columns.filter { $0 != .name }.reduce(CGFloat(0)) { $0 + (widths[$1] ?? 60) }
         if var nameW = widths[.name] {
             nameW = max(160, min(nameW, available - others))

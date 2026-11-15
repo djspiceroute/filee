@@ -643,7 +643,8 @@ final class QAHarness {
             // takes all the room and the last column got no slack.
             let cols = list.outline.tableColumns
             let name = cols.first { $0.identifier.rawValue == "name" }?.width ?? 0
-            let total = cols.reduce(CGFloat(0)) { $0 + $1.width }
+            let gaps = CGFloat(max(0, cols.count - 1)) * list.outline.intercellSpacing.width
+            let total = cols.reduce(CGFloat(0)) { $0 + $1.width } + gaps
             let room = list.scroll.contentSize.width
             let longest = p.folderModel.visible.map { textWidth($0.name, font: Theme.listFont(bold: $0.isFolder)) }.max() ?? 0
             let fits = name >= longest + 20

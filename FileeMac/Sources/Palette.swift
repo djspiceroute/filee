@@ -286,6 +286,13 @@ private final class PalettePanel: FileePanel {
             onClose?()
             return true
         }
+        // Plain Esc, caught here rather than left to cancelOperation(_:) bubbling from whatever has focus:
+        // NSTableView doesn't forward an unhandled Esc up the responder chain, so with the list focused
+        // (after a click on a row) cancelOperation(_:) never reached the panel.
+        if flags.isEmpty, event.keyCode == 53 {
+            onClose?()
+            return true
+        }
         return super.performKeyEquivalent(with: event)
     }
 }

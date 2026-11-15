@@ -230,12 +230,35 @@ final class PaletteController: NSObject, NSTextFieldDelegate, NSTableViewDataSou
 
     func numberOfRows(in tableView: NSTableView) -> Int { shown.count }
 
+    /// One icon per command category, not per command — about 40 commands, not 40 icons.
+    /// A few high-frequency or destructive ones (naming, copying, trash) get their own on top of that.
+    private static let namingCommands: Set<String> = ["rename", "batchRename", "prefixToday", "slugifyNames"]
+    private static let copyCommands: Set<String> = ["copyToOther", "moveToOther", "copyPath", "copyTildePath", "copyName", "copyMarkdownLink", "duplicate"]
+    private static let trashCommands: Set<String> = ["trash", "emptyTrash"]
+    private static let stackCommands: Set<String> = ["stackAdd", "stackCopyHere", "stackMoveHere", "stackClear"]
+    private static let appCommands: Set<String> = ["cancelOperation", "openSettings", "editSettingsFile", "openKeybindings", "openActions", "showMemory", "newWindow"]
+    private static let navigationCommands: Set<String> = [
+        "open", "openWith", "up", "selectLast", "back", "forward", "switchPane", "editPath", "go",
+        "toggleFavourite", "focusFavourites", "focusVolumes", "syncPanes", "parentInOtherPane",
+        "openInNewTab", "openInOtherPane", "swapPanes", "sendToDialog",
+    ]
+
+    private static func commandSymbol(for id: String) -> String {
+        if namingCommands.contains(id) { return "pencil" }
+        if copyCommands.contains(id) { return "doc.on.doc" }
+        if trashCommands.contains(id) { return "trash" }
+        if stackCommands.contains(id) { return "tray.and.arrow.down" }
+        if appCommands.contains(id) { return "gearshape" }
+        if navigationCommands.contains(id) { return "arrow.right" }
+        return "square.grid.2x2" // View/window and everything else not called out above.
+    }
+
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let e = shown[row]
         let cell = tableView.makeView(withIdentifier: PaletteCell.id, owner: nil) as? PaletteCell ?? PaletteCell()
         let symbol: String
         switch e.kind {
-        case .command: symbol = "command"
+        case .command: symbol = Self.commandSymbol(for: e.id)
         case .action: symbol = "bolt"
         case .folder: symbol = "folder"
         case .item: symbol = e.detail.isEmpty ? "doc" : "folder"
